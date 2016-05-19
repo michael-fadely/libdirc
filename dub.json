@@ -1,0 +1,6 @@
+{
+	"name": "libdirc",
+	"targetType": "library",
+	"sourcePaths": [ "libdirc" ],
+	"importPaths": [ "libdirc" ]
+}
