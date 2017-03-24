@@ -1,17 +1,20 @@
-module libdirc;
+module libdirc.client;
 
 import core.time;
 import std.algorithm;
 import std.array;
 import std.container.slist;
 import std.conv;
-import std.exception : enforce;
+import std.exception;
 import std.range;
 import std.regex;
+import std.socket;
 import std.string;
-import std.uni : sicmp;
+import std.uni;
 
-public import std.socket;
+import libdirc.channel;
+import libdirc.helper;
+import libdirc.user;
 
 debug import std.stdio;
 
@@ -22,502 +25,22 @@ private enum LINE_LENGTH      = (IRC_MAX_LEN - "\r\n".length) - IRC_USERHOST_LEN
 
 private auto ctcpRegex = ctRegex!(`\x01[^\x01]+\x01`);
 
-// TODO: Name consistency
-/// Supported IRC commands.
-enum IrcCommand : string
+struct ConnectionInfo
 {
-	ChanModes         = "CHANMODES",
-	Mode              = "MODE",
-	Error             = "ERROR",
-	Join              = "JOIN",
-	Invite            = "INVITE",
-	Kick              = "KICK",
-	Network           = "NETWORK",
-	Nick              = "NICK",
-	NickLen           = "NICKLEN",
-	Notice            = "NOTICE",
-	Part              = "PART",
-	Pass              = "PASS",
-	Ping              = "PING",
-	Prefix            = "PREFIX",
-	PrivMsg           = "PRIVMSG",
-	Quit              = "QUIT",
-	User              = "USER",
-	Whois             = "WHOIS",
-	TopicChange       = "TOPIC",
-	RPL_WELCOME       = "001",
-	RPL_YOURHOST      = "002",
-	RPL_CREATED       = "003",
-	RPL_MYINFO        = "004",
-	RPL_BOUNCE        = "005",
-	RPL_LUSERCLIENT   = "251",
-	RPL_LUSERCHANNELS = "254",
-	RPL_LUSERME       = "255",
-	RPL_USERHOST      = "302",
-	u_307             = "307",
-	RPL_WHOISUSER     = "311",
-	RPL_WHOISSERVER   = "312",
-	RPL_WHOISOPERATOR = "313",
-	RPL_ENDOFWHO      = "315",
-	RPL_WHOISIDLE     = "317",
-	RPL_ENDOFWHOIS    = "318",
-	RPL_WHOISCHANNELS = "319",
-	RPL_WHOISACCOUNT  = "330",
-	RPL_TOPIC         = "332",
-	TopicInfo         = "333",
-	RPL_WHOREPLY      = "352",
-	RPL_NAMREPLY      = "353",
-	RPL_ENDOFNAMES    = "366",
-	RPL_MOTD          = "372",
-	RPL_MOTDSTART     = "375",
-	RPL_ENDOFMOTD     = "376",
-	DisplayedHost     = "396",
-	ERR_NICKNAMEINUSE = "433",
-	JoinTooSoon       = "495"
+	string address;
+	ushort explicitPort;
 
-}
-
-/// Checks the first character of the given string for '#'.
-bool isChannel(in string str)
-{
-	return !str.empty && str[0] == '#';
-}
-
-/// Returns the nick name portion of a user prefix.
-string getNickName(in string prefix)
-{
-	string result = prefix.idup;
-	return result.munch("^! ");
-}
-
-/// Convenience function for enforcing `str.isChannel`
-void enforceChannel(string str)
-{
-	enforce(str.isChannel, "Input string is not a valid channel string.");
-}
-
-/// Convenience function for enforcing non-null parameters.
-void enforceNotNull(string str, string name)
-{
-	enforce(!str.empty, name ~ " must not be empty.");
-}
-
-/**
-	Represents a user on an IRC Network.
-
-	See_Also:
-		IrcChannel, IrcClient
-*/
-class IrcUser
-{
-private:
-	string[] _channels;
-	MonoTime _lastActionTime;
-
-	string _nickName, _userName, _hostName, _realName;
-
-public:
-	/**
-		Constructs an `IrcUser`
-
-		Params:
-			nickName = The nick name of this user.
-			userName = The user name of this user (optional).
-			hostName = The host name of this user (optional).
-			realName = The "real name" of this user (optional).
-
-		Throws:
-			`Exception` if nickName is `null`.
-	*/
-	this(in string nickName, in string userName = null, in string hostName = null, in string realName = null)
+	ushort port() @property const
 	{
-		enforceNotNull(nickName, nickName.stringof);
-		this.nickName = nickName;
-
-		if (userName !is null)
-		{
-			this.userName = userName;
-		}
-
-		if (hostName !is null)
-		{
-			this.hostName = hostName;
-		}
-
-		if (realName !is null)
-		{
-			this.realName = realName;
-		}
+		return !explicitPort ? defaultPort : explicitPort;
 	}
 
-	@property
+	string[] channels;
+	string channelKey;
+
+	ushort defaultPort() @property const
 	{
-		/// Gets or sets the nick name for this user.
-		/// Note that the setter duplicates your input.
-		auto nickName() const
-		{
-			return _nickName;
-		}
-		/// ditto
-		void nickName(in string value)
-		{
-			_nickName = value.dup;
-		}
-
-		/// Gets or sets the user name for this user.
-		/// Note that the setter duplicates your input.
-		auto userName() const
-		{
-			return _userName;
-		}
-		/// ditto
-		void userName(in string value)
-		{
-			_userName = value.dup;
-		}
-
-		/// Gets or sets the host name for this user.
-		/// Note that the setter duplicates your input.
-		auto hostName() const
-		{
-			return _hostName;
-		}
-		/// ditto
-		void hostName(in string value)
-		{
-			_hostName = value.dup;
-		}
-
-		/// Gets or sets the "real name" for this user.
-		/// Note that the setter duplicates your input.
-		auto realName() const
-		{
-			return _realName;
-		}
-		/// ditto
-		void realName(in string value)
-		{
-			_realName = value.dup;
-		}
-
-		/// Returns an array of channels this user is associated with.
-		auto channels() { return _channels; }
-		/// Returns the time of the last recorded action performed by this user.
-		/// See_Also: resetActionTime, isIdle, idleTime
-		auto lastActionTime() { return _lastActionTime; }
-	}
-
-	/// Resets the last recorded action time.
-	/// See_Also: lastActionTime
-	void resetActionTime()
-	{
-		_lastActionTime = MonoTime.currTime();
-	}
-
-	/**
-		Returns the idle state of this user.
-
-		Params:
-			current = Current time.
-			d = Minimum elapsed idle threshold.
-	*/
-	bool isIdle(in MonoTime current, in Duration d)
-	{
-		return current - _lastActionTime >= d;
-	}
-
-	/// Returns the duration for which this user has been idle.
-	/// See_Also: isIdle, lastactionTime, resetActionTime
-	Duration idleTime()
-	{
-		return MonoTime.currTime() - _lastActionTime;
-	}
-
-	/// Converts this user to a prefix string.
-	/// See_Also: fromPrefix
-	override string toString() const
-	{
-		return format("%s!%s@%s", _nickName, _userName, _hostName);
-	}
-
-	// see: https://github.com/JakobOvrum/Dirk/blob/master/source/irc/protocol.d#L235
-	/// Constructs an `IrcUser` from a prefix string.
-	static IrcUser fromPrefix(string prefix)
-	{
-		IrcUser result;
-
-		if (prefix !is null)
-		{
-			string nickName, userName, hostName;
-
-			nickName = prefix.munch("^!").dup;
-
-			if (prefix.length)
-			{
-				prefix = prefix[1 .. $];
-				userName = prefix.munch("^@");
-
-				if (prefix.length)
-				{
-					hostName = prefix[1 .. $];
-				}
-			}
-
-			result = new IrcUser(nickName, userName, hostName);
-		}
-
-		return result;
-	}
-
-	@safe unittest
-	{
-		const user = new IrcUser("nick", "user", "host");
-		assert(user.toString == "nick!user@host");
-
-		const prefix = IrcUser.fromPrefix("nick!user@host");
-		assert(prefix.nickName == "nick");
-		assert(prefix.userName == "user");
-		assert(prefix.hostName == "host");
-		assert(prefix.toString == "nick!user@host");
-
-		const notUser = IrcUser.fromPrefix("irc.server.net");
-		assert(notUser.nickName == "irc.server.net");
-	}
-}
-
-/// Represents an IRC channel.
-class IrcChannel
-{
-private:
-	string _name;
-	SList!IrcUser _users;
-	char[string] _userModes;
-	IrcClient _parent;
-
-public:
-	/**
-		Constructs an `IrcChannel`.
-
-		Params:
-			name = `string` representation of the channel.
-			parent = Parent client.
-
-		See_Also:
-			IrcUser, IrcClient
-	*/
-	this(in string name, IrcClient parent)
-	{
-		_name = name;
-		_parent = parent;
-	}
-
-	/// Used when no mode is associated with a user.
-	static const char noMode = '\0';
-
-	@property
-	{
-		/// Gets the name of this channel.
-		auto name() const { return _name; }
-		/// Gets the tracked user modes for all tracked users in this channel.
-		auto userModes() const { return _userModes; }
-		/// Gets all tracked users for this channel.
-		auto users() { return _users; }
-	}
-
-	/**
-		Get a tracked user by nick name.
-
-		Returns:
-			the tracked user if found, else `null`.
-	*/
-	IrcUser getUser(in string nickName)
-	{
-		auto search = find!(x => !sicmp(x.nickName, nickName))(_users[]);
-		return search.empty ? null : search.front;
-	}
-
-	/// Stops tracking a user in this channel.
-	void removeUser(in string nickName)
-	{
-		if (_userModes.remove(nickName))
-		{
-			debug stdout.writefln("Removed user modes for %s in %s", nickName, name);
-		}
-
-		auto search = find!(x => !sicmp(x.nickName, nickName))(_users[]);
-		if (search.empty)
-		{
-			return;
-		}
-
-		_users.linearRemove(take(search, 1));
-		debug stdout.writefln("Removed user %s from %s", nickName, name);
-		auto u = search.front;
-
-		const l = u._channels.length;
-		u._channels = u._channels.remove!(x => x == name);
-		if (l > u._channels.length)
-		{
-			debug stdout.writefln("Removed channel association for %s in %s", nickName, name);
-		}
-	}
-
-	/// Begins tracking a user in this channel.
-	void addUser(IrcUser user)
-	{
-		user._channels ~= name;
-		_users.insert(user);
-	}
-	/// ditto
-	void addUser(in string nickName)
-	{
-		auto user = _parent.getUser(nickName);
-		if (user !is null)
-		{
-			addUser(user);
-		}
-	}
-
-	// TODO: private
-	/**
-		Changes the nick name of a tracked user in this channel.
-		It's not recommended that you call this function directly.
-
-		Params:
-			oldNick = The current nick name of the user.
-			newNick = The new nick name of the user.
-	*/
-	void renameUser(in string oldNick, in string newNick)
-	{
-		auto mode = getMode(oldNick);
-		if (mode != noMode)
-		{
-			setMode(newNick, mode);
-			_userModes.remove(oldNick);
-		}
-	}
-
-	/**
-		Get the channel mode of a tracked user.
-		Returns:
-			The user mode character if the user is tracked.
-			Otherwise, `IrcChannel.noMode`.
-	*/
-	char getMode(in IrcUser user)
-	{
-		return getMode(user.nickName);
-	}
-	/// ditto
-	char getMode(in string nickName)
-	{
-		auto m = nickName in _userModes;
-		return m is null ? noMode : *m;
-	}
-
-	// TODO: private
-	/**
-		Sets the channel mode of a tracked user.
-		It's not recommended that you call this function directly.
-
-		Params:
-			nickName = The user whose mode is to be set.
-			mode = The mode to set.
-	*/
-	void setMode(in string nickName, char mode)
-	{
-		if (_parent.channelUserPrefixes.canFind(mode))
-		{
-			_userModes[nickName.idup] = mode;
-		}
-	}
-
-	// TODO: distinguish add/remove "modes" ('+', '-') from actual modes ('v', 'o', 'b')
-	/**
-		Used internally to manage the modes of tracked users.
-
-		It's not recommended that you call this function directly.
-		It is made available in the event that you need to extend
-		functionality in some way.
-
-		Params:
-			target = The target channel.
-			modes  = The modes use (+, -, etc)
-			args   = The actual modes to set.
-	*/
-	void onMode(in string target, in string modes, in string[] args)
-	{
-		if (!target.isChannel || target != name || args.empty)
-		{
-			return;
-		}
-
-		enum modeMode
-		{
-			None,
-			Give,
-			Take
-		}
-
-		modeMode m;
-		size_t i;
-		IrcUser u;
-
-		foreach (char c; modes)
-		{
-			switch (c)
-			{
-				case '+':
-					m = modeMode.Give;
-					continue;
-				case '-':
-					m = modeMode.Take;
-					continue;
-				default:
-					break;
-			}
-
-			auto index = _parent.channelUserModes.indexOf(c);
-			if (index > -1)
-			{
-				if (u is null || u.nickName != args[i])
-				{
-					u = getUser(args[i]);
-					// This happened once, and I can't track it down. Needs debugging at some point.
-					if (u is null)
-					{
-						//throw new Exception("Cannot handle modes on users not in this channel!");
-						++i;
-						continue;
-					}
-				}
-
-				with (modeMode) switch(m)
-				{
-					default:
-						throw new Exception("Cannot deduce mode type - was not Give or Take!");
-
-					case Give:
-						auto current = getMode(u.nickName);
-
-						if (current != IrcChannel.noMode)
-						{
-							const current_index = _parent.channelUserPrefixes.indexOf(current);
-							if (index >= current_index)
-								break;
-						}
-
-						_userModes[u.nickName.idup] = _parent.channelUserPrefixes[index];
-						break;
-
-					case Take:
-						_userModes.remove(u.nickName);
-						_parent.whois(u.nickName);
-						break;
-				}
-			}
-
-			++i;
-		}
+		return 6667;
 	}
 }
 
@@ -1410,7 +933,7 @@ public:
 			return;
 		}
 
-		if (u._channels.empty || (u._channels.length == 1 && u._channels[0] == channel))
+		if (u.channels.empty || (u.channels.length == 1 && !sicmp(u.channels[0], channel)))
 		{
 			removeUser(nickName);
 		}
@@ -1427,7 +950,7 @@ public:
 		auto chan = channel in channels;
 		enforce (chan !is null, "Channel isn't tracked.");
 
-		foreach (IrcUser user; chan._users)
+		foreach (IrcUser user; chan.users)
 		{
 			chan.removeUser(user.nickName);
 			if (user.channels.empty)
@@ -1963,21 +1486,57 @@ private:
 	}
 }
 
-struct ConnectionInfo
+// TODO: Name consistency
+/// Supported IRC commands.
+enum IrcCommand : string
 {
-	string address;
-	ushort explicitPort;
+	ChanModes         = "CHANMODES",
+	Mode              = "MODE",
+	Error             = "ERROR",
+	Join              = "JOIN",
+	Invite            = "INVITE",
+	Kick              = "KICK",
+	Network           = "NETWORK",
+	Nick              = "NICK",
+	NickLen           = "NICKLEN",
+	Notice            = "NOTICE",
+	Part              = "PART",
+	Pass              = "PASS",
+	Ping              = "PING",
+	Prefix            = "PREFIX",
+	PrivMsg           = "PRIVMSG",
+	Quit              = "QUIT",
+	User              = "USER",
+	Whois             = "WHOIS",
+	TopicChange       = "TOPIC",
+	RPL_WELCOME       = "001",
+	RPL_YOURHOST      = "002",
+	RPL_CREATED       = "003",
+	RPL_MYINFO        = "004",
+	RPL_BOUNCE        = "005",
+	RPL_LUSERCLIENT   = "251",
+	RPL_LUSERCHANNELS = "254",
+	RPL_LUSERME       = "255",
+	RPL_USERHOST      = "302",
+	u_307             = "307",
+	RPL_WHOISUSER     = "311",
+	RPL_WHOISSERVER   = "312",
+	RPL_WHOISOPERATOR = "313",
+	RPL_ENDOFWHO      = "315",
+	RPL_WHOISIDLE     = "317",
+	RPL_ENDOFWHOIS    = "318",
+	RPL_WHOISCHANNELS = "319",
+	RPL_WHOISACCOUNT  = "330",
+	RPL_TOPIC         = "332",
+	TopicInfo         = "333",
+	RPL_WHOREPLY      = "352",
+	RPL_NAMREPLY      = "353",
+	RPL_ENDOFNAMES    = "366",
+	RPL_MOTD          = "372",
+	RPL_MOTDSTART     = "375",
+	RPL_ENDOFMOTD     = "376",
+	DisplayedHost     = "396",
+	ERR_NICKNAMEINUSE = "433",
+	JoinTooSoon       = "495"
 
-	ushort port() @property const
-	{
-		return !explicitPort ? defaultPort : explicitPort;
-	}
-
-	string[] channels;
-	string channelKey;
-
-	ushort defaultPort() @property const
-	{
-		return 6667;
-	}
 }

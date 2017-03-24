@@ -409,6 +409,12 @@
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="libdirc">
-  <File path="libdirc.d" />
+  <Folder name="libdirc">
+   <File path="libdirc\channel.d" />
+   <File path="libdirc\client.d" />
+   <File path="libdirc\helper.d" />
+   <File path="libdirc\package.d" />
+   <File path="libdirc\user.d" />
+  </Folder>
  </Folder>
 </DProject>
