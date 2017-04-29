@@ -827,14 +827,7 @@ public:
 			args ~= wat[2];
 
 			parseCommand(prefix, command, args);
-
-			args.destroy();
-			_wat.destroy();
-			wat.destroy();
 		}
-
-		lines.destroy();
-		buffer.destroy();
 
 		socket.blocking = true;
 		return _connected;
@@ -894,7 +887,6 @@ public:
 			auto u = IrcUser.fromPrefix(prefix);
 			result.userName = u.userName.idup;
 			result.hostName = u.hostName.idup;
-			u.destroy();
 		}
 
 		return result;
@@ -1480,9 +1472,7 @@ private:
 	static bool isCtcp(in string message)
 	{
 		auto m = matchAll(message, ctcpRegex);
-		bool result = !m.empty;
-		m.destroy();
-		return result;
+		return !m.empty;
 	}
 }
 
