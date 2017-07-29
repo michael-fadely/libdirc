@@ -808,25 +808,65 @@ public:
 
 		foreach (string s; lines)
 		{
+			debug stdout.writeln(s);
+			string[] tags;
 			string prefix, command;
+			string[] args;
 
+			string[] getArgs(in string str)
+			{
+				auto s = str.findSplit(" :");
+				auto result = s[0].split(" ");
+				return (s[2].length) ? result ~ s[2] : result;
+			}
+
+			// If the line starts with a colon, there aren't
+			// any tags to deal with.
 			if (s[0] == ':')
 			{
 				s = s[1 .. $];
 				prefix = s.munch("^ ");
 				s.munch(" ");
 			}
+			else if (s[0] == '@')
+			{
+				s = s[1 .. $];
+				Appender!string tags_str;
+				ptrdiff_t colon;
+
+				while (true)
+				{
+					auto r = s[colon .. $]; 
+					colon = r.indexOf(':');
+					enforce(colon >= 0, "Malformed line: " ~ s);
+					
+					if (r[colon - 1] == ' ')
+					{
+						tags_str.put(r[0 .. colon - 1].dup);
+						r = r[++colon .. $];
+
+						prefix = r.munch("^ ");
+						r.munch(" ");
+						s = r;
+
+						break;
+					}
+					else
+					{
+						tags_str.put(r[0 .. ++colon].dup);
+					}
+				}
+
+				// TODO: un-escape tags
+				tags = tags_str.data.split(';');
+				debug stdout.writeln("TAGS: ", tags);
+			}
 
 			command = s.munch("^ ");
+			s.munch(" ");
+			args = getArgs(s);
 
-			auto wat = s.findSplit(" :");
-			auto _wat = wat[0];
-			_wat.munch(" ");
-
-			string[] args = _wat.split(" ");
-			args ~= wat[2];
-
-			parseCommand(prefix, command, args);
+			parseCommand(tags, prefix, command, args);
 		}
 
 		socket.blocking = true;
@@ -1008,7 +1048,7 @@ private:
 		raiseEvent(event, user, target, tag, m);
 	}
 
-	void parseCommand(in string prefix, in string command, in string[] args)
+	void parseCommand(in string[] tags, in string prefix, in string command, in string[] args)
 	{
 		with (IrcCommand) switch (command)
 		{
@@ -1034,6 +1074,9 @@ private:
 
 			case Ping:
 				raw("PONG :" ~ args[0]);
+				break;
+
+			case Pong:
 				break;
 
 			case Mode:
@@ -1493,6 +1536,7 @@ enum IrcCommand : string
 	Part              = "PART",
 	Pass              = "PASS",
 	Ping              = "PING",
+	Pong              = "PONG",
 	Prefix            = "PREFIX",
 	PrivMsg           = "PRIVMSG",
 	Quit              = "QUIT",
