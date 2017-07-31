@@ -7,7 +7,7 @@ import std.string;
 import std.uni;
 
 import libdirc.client;
-import libdirc.helper;
+import libdirc.util;
 import libdirc.user;
 
 debug import std.stdio;

@@ -16,6 +16,7 @@ import std.uni;
 import libdirc.channel;
 import libdirc.helper;
 import libdirc.user;
+import libdirc.util;
 
 debug import std.stdio;
 

@@ -4,6 +4,7 @@ import core.time;
 import std.string;
 
 import libdirc.helper;
+import libdirc.util;
 
 /**
 	Represents a user on an IRC Network.
