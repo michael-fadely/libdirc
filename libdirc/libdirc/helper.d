@@ -2,6 +2,36 @@ module libdirc.helper;
 
 import std.exception : enforce;
 
+R takeUntil(alias pred, R)(ref R arr)
+{
+	foreach (size_t i, e; arr)
+	{
+		if (pred(e))
+		{
+			auto result = arr[0 .. i];
+			arr = arr[(i > $ ? $ : i) .. $];
+			return result;
+		}
+	}
+
+	return arr;
+}
+
+R takeWhile(alias pred, R)(ref R arr)
+{
+	foreach (size_t i, e; arr)
+	{
+		if (!pred(e))
+		{
+			auto result = arr[0 .. i];
+			arr = arr[(i > $ ? $ : i) .. $];
+			return result;
+		}
+	}
+
+	return arr;
+}
+
 /// Checks the first character of the given string for '#'.
 bool isChannel(in string str)
 {
@@ -11,10 +41,11 @@ bool isChannel(in string str)
 /// Returns the nick name portion of a user prefix.
 string getNickName(in string prefix)
 {
-	import std.string : munch;
+	import std.regex;
 
-	string result = prefix.idup;
-	return result.munch("^! ");
+	static auto r = ctRegex!(`[!\s]`);
+
+	return splitter(prefix, r).front;
 }
 
 /// Convenience function for enforcing `str.isChannel`

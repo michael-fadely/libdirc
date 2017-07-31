@@ -3,6 +3,7 @@ module libdirc.client;
 import core.time;
 import std.algorithm;
 import std.array;
+import std.ascii : isDigit;
 import std.container.slist;
 import std.conv;
 import std.exception;
@@ -816,6 +817,12 @@ public:
 			string[] getArgs(in string str)
 			{
 				auto s = str.findSplit(" :");
+
+				if (s[2].empty)
+				{
+					s = str.findSplit(":");
+				}
+
 				auto result = s[0].split(" ");
 				return (s[2].length) ? result ~ s[2] : result;
 			}
@@ -825,8 +832,8 @@ public:
 			if (s[0] == ':')
 			{
 				s = s[1 .. $];
-				prefix = s.munch("^ ");
-				s.munch(" ");
+				prefix = s.takeUntil!isWhite;
+				s.takeWhile!isWhite;
 			}
 			else if (s[0] == '@')
 			{
@@ -845,8 +852,8 @@ public:
 						tags_str.put(r[0 .. colon - 1].dup);
 						r = r[++colon .. $];
 
-						prefix = r.munch("^ ");
-						r.munch(" ");
+						prefix = r.takeUntil!isWhite;
+						r.takeWhile!isWhite;
 						s = r;
 
 						break;
@@ -862,8 +869,8 @@ public:
 				debug stdout.writeln("TAGS: ", tags);
 			}
 
-			command = s.munch("^ ");
-			s.munch(" ");
+			command = s.takeUntil!isWhite;
+			s.takeWhile!isWhite;
 			args = getArgs(s);
 
 			parseCommand(tags, prefix, command, args);
@@ -1043,8 +1050,8 @@ private:
 		auto start = message.indexOf("\x01");
 		auto end = message[start + 1 .. $].indexOf("\x01");
 		string m = message[++start .. ++end];
-		string tag = m.munch("^ ");
-		m.munch(" ");
+		string tag = m.takeUntil!isWhite;
+		m.takeWhile!isWhite;
 		raiseEvent(event, user, target, tag, m);
 	}
 
@@ -1225,7 +1232,7 @@ private:
 				foreach (string s; names)
 				{
 					auto nick = s.idup;
-					auto modes = nick.munch(channelUserPrefixes.replace("^", "\\^"));
+					auto modes = nick.takeWhile!(x => channelUserPrefixes.canFind(x));
 
 					if (sicmp(nick, nickName) != 0) // skip self; added on join.
 					{
@@ -1253,14 +1260,14 @@ private:
 				if (user !is null)
 				{
 					auto rname = args[7].idup;
-					rname.munch("0-9 ");
+					rname.takeWhile!(x => isDigit(x) || isWhite(x));
 
 					user.userName = args[2].idup;
 					user.hostName = args[3].idup;
 					user.realName = rname;
 
-					auto mode  = args[6].idup;
-					mode.munch("^" ~ channelUserPrefixes.replace("^", "\\^"));
+					auto mode = args[6].idup;
+					mode.takeUntil!(x => channelUserPrefixes.canFind(x));
 
 					if (!mode.empty)
 					{
@@ -1493,10 +1500,13 @@ private:
 				//[2] = {length=57 "You must wait 5 seconds after being kicked to rejoin (+J)"}
 			case JoinTooSoon:
 				auto whatever = args[2].dup;
-				whatever.munch("^0-9");
+				whatever.takeUntil!isDigit;
+
 				enforce(!whatever.empty);
-				auto seconds_str = whatever.munch("0-9");
-				whatever.munch(" ");
+				
+				auto seconds_str = whatever.takeWhile!isDigit;
+				whatever.takeWhile!isWhite;
+				
 				auto seconds = to!int(seconds_str);
 
 				if (whatever.startsWith("second"))

@@ -161,7 +161,6 @@ public:
 		return format("%s!%s@%s", _nickName, _userName, _hostName);
 	}
 
-	// see: https://github.com/JakobOvrum/Dirk/blob/master/source/irc/protocol.d#L235
 	/// Constructs an `IrcUser` from a prefix string.
 	static IrcUser fromPrefix(string prefix)
 	{
@@ -169,14 +168,13 @@ public:
 
 		if (prefix !is null)
 		{
-			string nickName, userName, hostName;
+			string userName, hostName;
+			string nickName = prefix.takeUntil!(x => x == '!');
 
-			nickName = prefix.munch("^!").dup;
-
-			if (prefix.length)
+			if (!prefix.empty)
 			{
 				prefix = prefix[1 .. $];
-				userName = prefix.munch("^@");
+				userName = prefix.takeUntil!(x => x == '@');
 
 				if (prefix.length)
 				{
@@ -192,7 +190,7 @@ public:
 }
 
 ///
-@safe unittest
+unittest
 {
 	const user = new IrcUser("nick", "user", "host");
 	assert(user.toString() == "nick!user@host");

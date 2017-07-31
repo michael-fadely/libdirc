@@ -243,5 +243,12 @@ ModelManifest.xml
 
 # FAKE - F# Make
 .fake/
-/libdirc/lib
-/.dub/version.json
+
+.dub
+docs.json
+__dummy.html
+*.o
+*.obj
+*.exe
+__test__*__
+libdirc/lib
