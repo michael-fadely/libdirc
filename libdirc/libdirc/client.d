@@ -27,25 +27,6 @@ private enum LINE_LENGTH      = (IRC_MAX_LEN - "\r\n".length) - IRC_USERHOST_LEN
 
 private auto ctcpRegex = ctRegex!(`\x01[^\x01]+\x01`);
 
-struct ConnectionInfo
-{
-	string address;
-	ushort explicitPort;
-
-	ushort port() @property const
-	{
-		return !explicitPort ? defaultPort : explicitPort;
-	}
-
-	string[] channels;
-	string channelKey;
-
-	ushort defaultPort() @property const
-	{
-		return 6667;
-	}
-}
-
 /**
 	A client used for sending and reading data to/from an IRC server.
 	Automatically tracks users and channels.
@@ -80,7 +61,7 @@ private:
 
 	string _networkName;
 
-	private void sendNick()
+	void sendNick()
 	{
 		raw(IrcCommand.Nick ~ ' ' ~ nickName);
 	}
@@ -345,7 +326,7 @@ public:
 		while (outbound.length > lineLength)
 		{
 			auto s = outbound[0 .. lineLength];
-			auto space = s.indexOf(' ');
+			const space = s.indexOf(' ');
 			auto i = s.lastIndexOf(' ');
 
 			if (i < 0 || i <= space)
@@ -752,7 +733,7 @@ public:
 		}
 
 		ptrdiff_t received = socket.receive(data);
-		auto now = MonoTime.currTime;
+		const now = MonoTime.currTime;
 
 		if (!received || received == Socket.ERROR)
 		{
@@ -932,7 +913,7 @@ public:
 		}
 		else if (result.userName.empty || result.hostName.empty)
 		{
-			auto u = IrcUser.fromPrefix(prefix);
+			const u = IrcUser.fromPrefix(prefix);
 			result.userName = u.userName.idup;
 			result.hostName = u.hostName.idup;
 		}
