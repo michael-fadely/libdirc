@@ -114,6 +114,7 @@ public:
 			}
 
 			me.nickName = value.idup;
+
 			if (_connected)
 			{
 				sendNick();
@@ -399,6 +400,7 @@ public:
 	void join(string channel, string key = null)
 	{
 		enforceChannel(channel);
+
 		if (key is null)
 		{
 			raw(IrcCommand.Join ~ ' ' ~ channel);
@@ -552,6 +554,7 @@ public:
 	void addToChannelList(in string channel, char type, in string[] args)
 	{
 		enforceChannel(channel);
+
 		foreach (arg; args)
 		{
 			rawf(IrcCommand.Mode ~ " %s +%c %s", channel, type, arg);
@@ -575,6 +578,7 @@ public:
 	void removeFromChannelList(in string channel, char type, in string[] args)
 	{
 		enforceChannel(channel);
+
 		foreach (arg; args)
 		{
 			rawf(IrcCommand.Mode ~ " %s -%c %s", channel, type, arg);
@@ -885,6 +889,7 @@ public:
 	IrcUser addUser(in string prefix, in string channel = null)
 	{
 		IrcUser result = getUser(getNickName(prefix));
+
 		if (result is null)
 		{
 			result = IrcUser.fromPrefix(prefix);
@@ -936,6 +941,7 @@ public:
 		}
 
 		auto search = find!(x => !sicmp(x.nickName, nickName))(users[]);
+
 		if (!search.empty)
 		{
 			users.linearRemove(take(search, 1));
@@ -969,13 +975,16 @@ public:
 	{
 		enforceChannel(channel);
 		auto chan = channel in channels;
-		enforce (chan !is null, "Channel isn't tracked.");
+		enforce(chan !is null, "Channel isn't tracked.");
 
 		foreach (IrcUser user; chan.users)
 		{
 			chan.removeUser(user.nickName);
+
 			if (user.channels.empty)
+			{
 				removeUser(user);
+			}
 		}
 
 		channels.remove(channel);
@@ -1079,6 +1088,7 @@ private:
 
 				user.resetActionTime();
 				raiseEvent(onMode, user, args[0], args[1], nicks);
+
 				if (args[0].isChannel)
 				{
 					auto channel = args[0].idup;
@@ -1101,6 +1111,7 @@ private:
 					try
 					{
 						handled = cb(failedNick);
+
 						if (handled)
 						{
 							break;
@@ -1211,6 +1222,7 @@ private:
 			case RPL_NAMREPLY:
 				auto channel = args[2];
 				auto names = args[3].split.filter!(x => x.length > 0);
+
 				foreach (string s; names)
 				{
 					auto nick = s.idup;
@@ -1261,6 +1273,7 @@ private:
 			case Part:
 				auto user = getUserFromPrefix(prefix);
 				auto channel = args[0];
+
 				raiseEvent(onPart, user, channel);
 
 				if (!sicmp(user.nickName, nickName))
@@ -1278,6 +1291,7 @@ private:
 				auto channel = args[0];
 				auto kicked = args[1];
 				string reason = args.length > 2 ? args[2] : "";
+
 				user.resetActionTime();
 				raiseEvent(onKick, user, channel, kicked, reason);
 
@@ -1294,6 +1308,7 @@ private:
 			case Quit:
 				auto user = getUserFromPrefix(prefix);
 				string message = !args.empty ? args[0] : null;
+
 				raiseEvent(onQuit, user, message);
 				removeUser(user);
 				break;
@@ -1312,6 +1327,7 @@ private:
 
 			case RPL_WHOISUSER:
 				auto user = getUser(args[1]);
+
 				if (user is null)
 				{
 					user = new IrcUser(args[1], args[2], args[3], args[5]);
@@ -1346,6 +1362,7 @@ private:
 				foreach(ref channel; chanList)
 				{
 					char p = IrcChannel.noMode;
+
 					while (channelUserPrefixes.canFind(channel[0]))
 					{
 						if (p == IrcChannel.noMode || channelUserPrefixes.indexOf(channel[0]) < channelUserPrefixes.indexOf(p))
@@ -1362,6 +1379,7 @@ private:
 					}
 
 					auto chan = channel in channels;
+
 					if (chan !is null)
 					{
 						chan.setMode(nick, p);
@@ -1377,7 +1395,9 @@ private:
 
 			case u_307:
 				if (!sicmp(args[0], nickName))
+				{
 					raiseEvent(onWhoisAccountReply, args[1], args[1]);
+				}
 				break;
 
 			case RPL_WHOISACCOUNT:
@@ -1411,20 +1431,22 @@ private:
 							break;
 
 						case "PREFIX":
-							if (!value.empty)
+							if (value.empty)
 							{
-								enforce(value[0] == '(');
-
-								auto end = value.indexOf(')');
-								enforce(end != -1 && end != value.length - 1);
-
-								auto modes = value[1 .. end];
-								auto prefixes = value[end + 1 .. $];
-								enforce(modes.length == prefixes.length);
-
-								_channelUserModes    = modes.dup;
-								_channelUserPrefixes = prefixes.dup;
+								break;
 							}
+
+							enforce(value[0] == '(');
+
+							auto end = value.indexOf(')');
+							enforce(end != -1 && end != value.length - 1);
+
+							auto modes = value[1 .. end];
+							auto prefixes = value[end + 1 .. $];
+							enforce(modes.length == prefixes.length);
+
+							_channelUserModes    = modes.dup;
+							_channelUserPrefixes = prefixes.dup;
 							break;
 
 						case "CHANMODES":
@@ -1564,5 +1586,4 @@ enum IrcCommand : string
 	DisplayedHost     = "396",
 	ERR_NICKNAMEINUSE = "433",
 	JoinTooSoon       = "495"
-
 }

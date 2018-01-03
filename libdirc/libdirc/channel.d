@@ -173,14 +173,14 @@ public:
 			return;
 		}
 
-		enum modeMode
+		enum ModeMode
 		{
-			None,
-			Give,
-			Take
+			none,
+			give,
+			take
 		}
 
-		modeMode m;
+		ModeMode m;
 		size_t i;
 		IrcUser u;
 
@@ -189,16 +189,17 @@ public:
 			switch (c)
 			{
 				case '+':
-					m = modeMode.Give;
+					m = ModeMode.give;
 					continue;
 				case '-':
-					m = modeMode.Take;
+					m = ModeMode.take;
 					continue;
 				default:
 					break;
 			}
 
 			auto index = _parent.channelUserModes.indexOf(c);
+
 			if (index > -1)
 			{
 				if (u is null || u.nickName != args[i])
@@ -213,12 +214,12 @@ public:
 					}
 				}
 
-				with (modeMode) switch(m)
+				with (ModeMode) switch(m)
 				{
 					default:
-						throw new Exception("Cannot deduce mode type - was not Give or Take!");
+						throw new Exception(`Cannot deduce mode type - was not "give" or "take"!`);
 
-					case Give:
+					case give:
 						auto current = getMode(u.nickName);
 
 						if (current != IrcChannel.noMode)
@@ -231,7 +232,7 @@ public:
 						_userModes[u.nickName.idup] = _parent.channelUserPrefixes[index];
 						break;
 
-					case Take:
+					case take:
 						_userModes.remove(u.nickName);
 						_parent.whois(u.nickName);
 						break;
