@@ -61,7 +61,7 @@
   <objname />
   <libname />
   <doDocComments>0</doDocComments>
-  <docdir />
+  <docdir>$(SolutionDir)\doc</docdir>
   <docname />
   <modules_ddoc />
   <ddocfiles />
@@ -167,8 +167,8 @@
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
-  <doDocComments>0</doDocComments>
-  <docdir />
+  <doDocComments>1</doDocComments>
+  <docdir>$(SolutionDir)\doc</docdir>
   <docname />
   <modules_ddoc />
   <ddocfiles />
@@ -275,7 +275,7 @@
   <objname />
   <libname />
   <doDocComments>0</doDocComments>
-  <docdir />
+  <docdir>$(SolutionDir)\doc</docdir>
   <docname />
   <modules_ddoc />
   <ddocfiles />
@@ -381,8 +381,8 @@
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
-  <doDocComments>0</doDocComments>
-  <docdir />
+  <doDocComments>1</doDocComments>
+  <docdir>$(SolutionDir)\doc</docdir>
   <docname />
   <modules_ddoc />
   <ddocfiles />
