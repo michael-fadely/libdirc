@@ -120,7 +120,7 @@ public:
 				enforce(value.length <= maxNickLength, "Nick length exceeds max nick length enforced by server.");
 			}
 
-			me.nickName = value.idup;
+			me.nickName = value;
 
 			if (_connected)
 			{
@@ -138,7 +138,7 @@ public:
 		void userName(in string value)
 		{
 			enforce(!_connected, "Cannot change userName while connected.");
-			me.userName = value.idup;
+			me.userName = value;
 		}
 
 		/// Gets the currently assigned host name.
@@ -157,7 +157,7 @@ public:
 		void realName(in string value)
 		{
 			enforce(!_connected, "Cannot change realName while connected.");
-			me.realName = value.idup;
+			me.realName = value;
 		}
 
 		/// Gets the name of the currently connected network.
@@ -963,8 +963,8 @@ public:
 		else if (result.userName.empty || result.hostName.empty)
 		{
 			const u = IrcUser.fromPrefix(prefix);
-			result.userName = u.userName.idup;
-			result.hostName = u.hostName.idup;
+			result.userName = u.userName;
+			result.hostName = u.hostName;
 		}
 
 		return result;
@@ -1540,7 +1540,7 @@ private:
 					.filter!(x => user.channels.canFind(x.name))
 					.each!(x => x.renameUser(user.nickName, newNick));
 
-				user.nickName = newNick.idup;
+				user.nickName = newNick;
 				break;
 
 			case Join:
@@ -1568,7 +1568,7 @@ private:
 
 				foreach (string s; names)
 				{
-					auto nick = s.idup;
+					auto nick = s;
 					auto modes = nick.takeWhile!(x => channelUserPrefixes.canFind(x));
 
 					if (sicmp(nick, nickName) != 0) // skip self; added on join.
@@ -1599,8 +1599,8 @@ private:
 					auto rname = args[7].idup;
 					rname.takeWhile!(x => isDigit(x) || isWhite(x));
 
-					user.userName = args[2].idup;
-					user.hostName = args[3].idup;
+					user.userName = args[2];
+					user.hostName = args[3];
 					user.realName = rname;
 
 					auto mode = args[6].idup;
@@ -1677,10 +1677,10 @@ private:
 				}
 				else
 				{
-					user.nickName = args[1].idup;
-					user.userName = args[2].idup;
-					user.hostName = args[3].idup;
-					user.realName = args[5].idup;
+					user.nickName = args[1];
+					user.userName = args[2];
+					user.hostName = args[3];
+					user.realName = args[5];
 				}
 
 				raiseEvent(onWhoisReply, user);
