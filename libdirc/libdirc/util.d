@@ -11,7 +11,7 @@ bool isChannel(in string str)
 /// Returns the nick name portion of a user prefix.
 string getNickName(in string prefix)
 {
-	import std.regex;
+	import std.regex : ctRegex, splitter;
 
 	static auto r = ctRegex!(`[!\s]`);
 

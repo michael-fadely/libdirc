@@ -50,12 +50,12 @@ private:
 
 	// see: https://github.com/JakobOvrum/Dirk/blob/master/source/irc/client.d#L97
 	// CHANMODES
-	string channelListModes             = "b";  // Type A
-	string channelParameterizedModes    = null; // Type B
-	string channelNullaryRemovableModes = null; // Type C
-	string channelSettingModes          = null; // Type D
+	string channelListModes = "b";       // Type A
+	string channelParameterizedModes;    // Type B
+	string channelNullaryRemovableModes; // Type C
+	string channelSettingModes;          // Type D
 
-	uint maxNickLength;
+	uint _maxNickLength;
 
 	IrcUser me;
 
@@ -88,8 +88,7 @@ public:
 	}
 	~this()
 	{
-		if (_connected)
-			quit();
+		quit();
 	}
 
 	@property
@@ -100,7 +99,15 @@ public:
 			return _connected && socket.isAlive;
 		}
 
+		/// The maximum allowed nick name length on this server.
+		/// If no explicit limit has been provided, this will be `0`.
+		auto maxNickLength() const
+		{
+			return _maxNickLength;
+		}
+
 		/// Gets or sets the client's nick name for this network.
+		/// Throws: `Exception` if length exceeds `maxNickLength` (if `maxNickLength` is > `0`).
 		auto nickName() const
 		{
 			return me.nickName;
@@ -176,9 +183,9 @@ public:
 
 		Throws:
 			`Exception` if already connected,
-			if nickName is `null`,
-			if userName is `null`,
-			if realName is `null`.
+			if `nickName` is `null`,
+			if `userName` is `null`,
+			if `realName` is `null`.
 	*/
 	void connect(Address address, in string password = null)
 	{
@@ -602,7 +609,20 @@ public:
 	{
 		ban(channel, user.toString());
 	}
-	/// ditto
+	
+	/**
+		Bans a mask from the specified channel.
+
+		Params:
+			channel = The channel to ban from.
+			mask    = The mask to ban.
+
+		Throws:
+			`Exception` if `channel` is not a valid channel string.
+
+		See_Also:
+			unban, kick, kickBan
+	*/
 	void ban(in string channel, in string mask)
 	{
 		enforceChannel(channel);
@@ -640,7 +660,18 @@ public:
 	{
 		kickBan(channel, user.nickName, comment);
 	}
-	/// ditto
+	
+	/**
+		Kicks and bans a user from the specified channel.
+
+		Params:
+			channel  = The channel to kick ban the user from.
+			nickName = The nick name of the user to be kicked.
+			comment  = Kick comment (optional).
+
+		Throws:
+			`Exception` if `channel` is not a valid channel string.
+	*/
 	void kickBan(in string channel, in string nickName, in string comment = null)
 	{
 		ban(channel, nickName);
@@ -728,7 +759,7 @@ public:
 
 		if (overflow !is null)
 		{
-			auto remainder = IRC_MAX_LEN - overflow.length;
+			const remainder = IRC_MAX_LEN - overflow.length;
 			data = !remainder ? in_buffer : new char[remainder];
 		}
 		else
@@ -867,7 +898,7 @@ public:
 	}
 
 	/// Get tracked user from nick name.
-	/// Returns: null if user is not tracked.
+	/// Returns: `null` if user is not tracked.
 	IrcUser getUser(in string nickName)
 	{
 		if (nickName == this.nickName)
@@ -884,7 +915,10 @@ public:
 
 		Params:
 			prefix = Prefix of the user to be tracked.
-			channel = Channel the user is in (optional). This channel will also be tracked.w
+			channel = Channel the user is in (optional). This channel will also be tracked.
+
+		Returns:
+			Tracked `IrcUser`.
 	*/
 	IrcUser addUser(in string prefix, in string channel = null)
 	{
@@ -907,6 +941,16 @@ public:
 	/// Get a tracked user from a prefix.
 	/// If a tracked user from this prefix doesn't exist, a new `IrcUser` is returned.
 	/// Otherwise, the tracked user is returned.
+
+	/**
+		Get a tracked user from a prefix.
+
+		Params:
+			prefix = The prefix of the tracked user to search for.
+
+		Returns:
+			Existing `IrcUser` instance if already tracked, else a newly created instance.
+	*/
 	IrcUser getUserFromPrefix(in string prefix)
 	{
 		string nick = getNickName(prefix);
@@ -990,37 +1034,338 @@ public:
 		channels.remove(channel);
 	}
 
+	/// Raised on successful connect to the server.
 	void delegate()[] onConnect;
+
+	/**
+		Raised when the client receives a CTCP query.
+
+		Params:
+			user   = The user who sent the CTCP query.
+			source = The location it was sent from (e.g a channel).
+			tag    = The CTCP tag (e.g PING, VERSION)
+			data   = Additional data sent qith the CTCP query.
+	*/
 	void delegate(IrcUser user, in string source, in string tag, in string data)[] onCtcpQuery;
+
+	/**
+		Raised when a response to a CTCP query is received.
+
+		Params:
+			user   = The user who sent the CTCP reply.
+			source = The location it was sent from (e.g a channel).
+			tag    = The CTCP tag (e.g PING, VERSION)
+			data   = Additional data sent qith the CTCP reply.
+	*/
 	void delegate(IrcUser user, in string source, in string tag, in string data)[] onCtcpReply;
+
+	/**
+		Raised when a channel invite is received.
+		Note that this is raised for ALL invites.
+		When your client is invited, `target` will
+		equal `nickName`.
+
+		Params:
+			user    = The user who issued the invite.
+			target  = The user being invited.
+			channel = The channel `target` has been invited to.
+	*/
 	void delegate(IrcUser user, in string target, in string channel)[] onInvite;
+
+	/**
+		Raised when a user joins a channel.
+
+		Params:
+			user    = The user who joined.
+			channel = The channel the user joined.
+
+		See_Also:
+			onJoinTooSoon, onSuccessfulJoin
+	*/
 	void delegate(IrcUser user, in string channel)[] onJoin;
-	void delegate(IrcUser kicker, in string channel, in string kickedNick, in string comment)[] onKick;
-	void delegate(IrcUser user, in string target, in string message)[] onMessage;
-	void delegate(IrcUser user, in string target, in string modes, in string[] args)[] onMode;
-	void delegate(in string message)[] onMotdEnd;
-	void delegate(in string line)[] onMotdLine;
-	void delegate(in string message)[] onMotdStart;
-	void delegate(in string channel, in string[] nickNames)[] onNameList;
-	void delegate(in string channel)[] onNameListEnd;
-	void delegate(IrcUser user, in string newNick)[] onNickChange;
-	bool delegate(in string oldNick)[] onNickInUse;
-	void delegate(IrcUser user, in string target, in string message)[] onNotice;
-	void delegate(IrcUser user, in string channel)[] onPart;
-	void delegate(IrcUser user, in string comment)[] onQuit;
-	void delegate(in string channel)[] onSuccessfulJoin;
-	void delegate(in string channel, in string topic)[] onTopic;
-	void delegate(IrcUser user, in string channel, in string topic)[] onTopicChange;
-	void delegate(in string channel, in string nick, in string time)[] onTopicInfo;
-	void delegate(in IrcUser[] users)[] onUserhostReply;
-	void delegate(in string nick, in string accountName)[] onWhoisAccountReply;
-	void delegate(in string nick, in string[] channels)[] onWhoisChannelsReply;
-	void delegate(in string nick)[] onWhoisEnd;
-	void delegate(in string nick, int idleTime)[] onWhoisIdleReply;
-	void delegate(in string nick)[] onWhoisOperatorReply;
-	void delegate(IrcUser userInfo)[] onWhoisReply;
-	void delegate(in string nick, in string serverHostName, in string serverInfo)[] onWhoisServerReply;
+
+	/**
+		Raised when this client joins a channel which
+		has a join timer that has not yet finished.
+
+		Params:
+			user    = The user who joined (this client).
+			channel = The channel joined.
+
+		See_Also:
+			onJoin, onSuccessfulJoin
+	*/
 	void delegate(in string channel, int seconds)[] onJoinTooSoon;
+
+	/**
+		Raised when this client has joined a channel.
+
+		Params:
+			channel = The channel joined.
+
+		See_Also:
+			onJoin, onJoinTooSoon
+	*/
+	void delegate(in string channel)[] onSuccessfulJoin;
+
+	/**
+		Raised when a user is kicked from a channel.
+
+		Params:
+			kicker     = The user who issued the kick.
+			channel    = The channel the user is being kicked from.
+			kickedNick = The user who is being kicked.
+			comment    = Kick message.
+	*/
+	void delegate(IrcUser kicker, in string channel, in string kickedNick, in string comment)[] onKick;
+	
+	/**
+		Raised when a channel or private message is received.
+
+		Params:
+			user    = The user that sent the message.
+			target  = The target location. This can be a channel or a nickname (`nickName`).
+			message = The content of the message.
+	*/
+	void delegate(IrcUser user, in string target, in string message)[] onMessage;
+
+	/**
+		Raised when a channel or user mode (or both) is changed.
+
+		Params:
+			user   = The user who set the mode.
+			target = The target whose modes are to be changed. This can be a user or a channel.
+			modes  = The modes to give/take.
+			args   = The arguments for `modes`, if any.
+	*/
+	void delegate(IrcUser user, in string target, in string modes, in string[] args)[] onMode;
+	
+	/**
+		Raised when the server MOTD begins.
+
+		Params:
+			message = The MOTD welcome message.
+
+		See_Also:
+			onMotdLine, onMotdEnd
+	*/
+	void delegate(in string message)[] onMotdStart;
+
+	/**
+		Raised for each line of the server MOTD.
+		Let's be honest. It's probably just ASCII art.
+
+		Params:
+			line = The MOTD line.
+
+		See_Also:
+			onMotdStart, onMotdEnd
+	*/
+	void delegate(in string line)[] onMotdLine;
+
+	/**
+		Raised when the server MOTD begins.
+
+		Params:
+			message = The MOTD footer message.
+
+		See_Also:
+			onMotdStart, onMotdLine
+	*/
+	void delegate(in string message)[] onMotdEnd;
+
+	/**
+		Raised when a nick name list is received for a channel.
+
+		Params:
+			channel   = The channel containing the nick names.
+			nickNames = The list of nick names.
+
+		See_Also:
+			onNameListEnd
+	*/
+	void delegate(in string channel, in string[] nickNames)[] onNameList;
+
+	/**
+		Raised when a nick name list received by `onNameList` has finished.
+
+		Params:
+			channel = The channel containing the nick names.
+
+		See_Also:
+			onNameListEnd
+	*/
+	void delegate(in string channel)[] onNameListEnd;
+
+	/**
+		Raised when a user's nick name has changed.
+
+		Params:
+			user    = The user whose nick name has changed.
+			newNick = The user's new nick name.
+	*/
+	void delegate(IrcUser user, in string newNick)[] onNickChange;
+
+	/**
+		Raised when this client's nick name is in use.
+		If the event is not handled by any delegates,
+		an exception is thrown.
+
+		To handle the exception, you must set a new name
+		by changing `nickName`, and then return `true`.
+
+		Params:
+			oldNick = The nick name that is already in use.
+
+		Returns:
+			`true` if it has been handled, else `false`.
+			If the event is not handled by any delegates,
+			an exception is thrown.
+
+		See_Also:
+			nickName
+	*/
+	bool delegate(in string oldNick)[] onNickInUse;
+
+	/**
+		Raised when a notice is received.
+
+		Params:
+			user    = The user who issued the notice.
+			target  = The target location for the notice. This can be a user or a channel.
+			message = The content of the notice.
+	*/
+	void delegate(IrcUser user, in string target, in string message)[] onNotice;
+
+	/**
+		Raised when a user leaves a channel.
+		This event is also raised when this client instance
+		leaves a channel.
+
+		Params:
+			user    = The user who left.
+			channel = The channel that the user left.
+
+		See_Also:
+			onQuit
+	*/
+	void delegate(IrcUser user, in string channel)[] onPart;
+
+	/**
+		Raised when a user leaves a channel.
+		This event is only raised for users other than this instance.
+
+		Params:
+			user    = The user who quit.
+			comment = The quit message.
+
+		See_Also:
+			onPart
+	*/
+	void delegate(IrcUser user, in string comment)[] onQuit;
+
+	/**
+		Provides the channel topic after successfully joining.
+
+		Params:
+			channel = The channel this topic belongs to.
+			topic   = The topic.
+
+		See_Also:
+			onTopicInfo, onTopicChange
+	*/
+	void delegate(in string channel, in string topic)[] onTopic;
+
+	/**
+		Raised when a channel's topic has been changed.
+
+		Params:
+			user    = The user who changed the topic.
+			channel = The channel this topic belongs to.
+			topic   = The new topic.
+
+		See_Also:
+			onTopic, onTopicInfo
+	*/
+	void delegate(IrcUser user, in string channel, in string topic)[] onTopicChange;
+
+	/**
+		Metadata for the channel's topic.
+
+		Params:
+			channel = The channel this topic belongs to.
+			nick    = The nick name of the user who last set the topic.
+			time    = The time the topic was last set.
+
+		See_Also:
+			onTopic, onTopicChange
+	*/
+	void delegate(in string channel, in string nick, in string time)[] onTopicInfo;
+
+	// TODO
+	//void delegate(in IrcUser[] users)[] onUserhostReply;
+
+	/**
+		Raised for the account line of a WHOIS reply.
+
+		Params:
+			nick        = The nick name of the user.
+			accountName = The account name of the user.
+	*/
+	void delegate(in string nick, in string accountName)[] onWhoisAccountReply;
+
+	/**
+		Raised for the channels line of a WHOIS reply.
+
+		Params:
+			nick     = The nick name of the user.
+			channels = The channels this user is in.
+	*/
+	void delegate(in string nick, in string[] channels)[] onWhoisChannelsReply;
+
+	/**
+		Raised when the WHOIS reply is complete.
+
+		Params:
+			nick = The nick name of the user.
+	*/
+	void delegate(in string nick)[] onWhoisEnd;
+
+	/**
+		Raised for the idle line of a WHOIS reply.
+
+		Params:
+			nick     = The nick name of the user.
+			idleTime = The amount of time the user has been idle.
+	*/
+	void delegate(in string nick, int idleTime)[] onWhoisIdleReply;
+
+	/**
+		Raised for the OPER line of a WHOIS reply.
+		This only occurs if the user is an IRC operator.
+
+		Params:
+			nick = The nick name of the user.
+	*/
+	void delegate(in string nick)[] onWhoisOperatorReply;
+
+	/**
+		Raised for the user info line of a WHOIS reply.
+
+		Params:
+			userInfo = The info for the user (hostmask, etc).
+	*/
+	void delegate(IrcUser userInfo)[] onWhoisReply;
+
+	/**
+		Raised for the server line of a WHOIS reply.
+
+		Params:
+			nick           = The nick name of the user.
+			serverHostName = The hostname of the server the user is connecting from.
+			serverInfo     = Additional server information.
+	*/
+	void delegate(in string nick, in string serverHostName, in string serverInfo)[] onWhoisServerReply;
 
 private:
 	void disconnect()
@@ -1134,10 +1479,9 @@ private:
 				auto target = args[0];
 				auto user = getUserFromPrefix(prefix);
 				auto message = args[1];
-				bool ctcp = isCtcp(message);
 				user.resetActionTime();
 
-				if (ctcp)
+				if (isCtcp(message))
 				{
 					raiseCtcpEvent(onCtcpQuery, user, target, message);
 				}
@@ -1152,10 +1496,9 @@ private:
 				auto target = args[0];
 				auto user = getUserFromPrefix(prefix);
 				auto message = args[1];
-				bool ctcp = isCtcp(message);
 				user.resetActionTime();
 
-				if (ctcp)
+				if (isCtcp(message))
 				{
 					raiseCtcpEvent(onCtcpReply, user, target, message);
 				}
@@ -1307,7 +1650,7 @@ private:
 
 			case Quit:
 				auto user = getUserFromPrefix(prefix);
-				string message = !args.empty ? args[0] : null;
+				string message = args.empty ? null : args[0];
 
 				raiseEvent(onQuit, user, message);
 				removeUser(user);
@@ -1483,7 +1826,7 @@ private:
 						case "NICKLEN":
 							if (!value.empty)
 							{
-								maxNickLength = to!(typeof(maxNickLength))(value);
+								_maxNickLength = to!(typeof(_maxNickLength))(value);
 							}
 
 							break;

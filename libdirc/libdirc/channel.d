@@ -54,8 +54,11 @@ public:
 	/**
 		Get a tracked user by nick name.
 
+		Params:
+			nickName = The nick name to search for.
+
 		Returns:
-			the tracked user if found, else `null`.
+			The tracked `IrcUser` if found, else `null`.
 	*/
 	IrcUser getUser(in string nickName)
 	{
@@ -63,7 +66,12 @@ public:
 		return search.empty ? null : search.front;
 	}
 
-	/// Stops tracking a user in this channel.
+	/**
+		Stops tracking a user in this channel.
+
+		Params:
+			nickName = The user to stop tracking.
+	*/
 	void removeUser(in string nickName)
 	{
 		if (_userModes.remove(nickName))
@@ -72,6 +80,7 @@ public:
 		}
 
 		auto search = find!(x => !sicmp(x.nickName, nickName))(_users[]);
+		
 		if (search.empty)
 		{
 			return;
@@ -84,13 +93,30 @@ public:
 		u.removeChannel(name);
 	}
 
-	/// Begins tracking a user in this channel.
+	/**
+		Begins tracking a user in this channel.
+
+		Params:
+			user = The user to begin tracking.
+
+		See_Also:
+			IrcUser
+	*/
 	void addUser(IrcUser user)
 	{
 		user.addChannel(name);
 		_users.insert(user);
 	}
-	/// ditto
+
+	/**
+		Begins tracking a user in this channel.
+
+		Params:
+			nickName = The nick name of the user to begin tracking.
+
+		See_Also:
+			IrcUser
+	*/
 	void addUser(in string nickName)
 	{
 		auto user = _parent.getUser(nickName);
@@ -112,6 +138,7 @@ public:
 	void renameUser(in string oldNick, in string newNick)
 	{
 		auto mode = getMode(oldNick);
+
 		if (mode != noMode)
 		{
 			setMode(newNick, mode);
@@ -121,6 +148,10 @@ public:
 
 	/**
 		Get the channel mode of a tracked user.
+
+		Params:
+			user = The user whose mode is to be retrieved.
+
 		Returns:
 			The user mode character if the user is tracked.
 			Otherwise, `IrcChannel.noMode`.
@@ -129,7 +160,17 @@ public:
 	{
 		return getMode(user.nickName);
 	}
-	/// ditto
+
+	/**
+		Get the channel mode of a tracked user.
+
+		Params:
+			nickName = The nick name of the user whose mode is to be retrieved.
+
+		Returns:
+			The user mode character if the user is tracked.
+			Otherwise, `IrcChannel.noMode`.
+	*/
 	char getMode(in string nickName)
 	{
 		auto m = nickName in _userModes;
@@ -191,9 +232,11 @@ public:
 				case '+':
 					m = ModeMode.give;
 					continue;
+
 				case '-':
 					m = ModeMode.take;
 					continue;
+
 				default:
 					break;
 			}
@@ -205,6 +248,7 @@ public:
 				if (u is null || u.nickName != args[i])
 				{
 					u = getUser(args[i]);
+
 					// This happened once, and I can't track it down. Needs debugging at some point.
 					if (u is null)
 					{
@@ -225,8 +269,11 @@ public:
 						if (current != IrcChannel.noMode)
 						{
 							const current_index = _parent.channelUserPrefixes.indexOf(current);
+
 							if (index >= current_index)
+							{
 								break;
+							}
 						}
 
 						_userModes[u.nickName.idup] = _parent.channelUserPrefixes[index];

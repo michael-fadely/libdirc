@@ -110,17 +110,28 @@ public:
 			return _channels;
 		}
 
-		/// Returns the time of the last recorded action performed by this user.
+		/// Gets the time of the last recorded action performed by this user.
 		/// See_Also: resetActionTime, isIdle, idleTime
 		auto lastActionTime() { return _lastActionTime; }
 	}
 
-	/// Associate a channel with this user.
+	/**
+		Associate a channel with this user.
+
+		Params:
+			channel = The channel to associate with this user.
+	*/
 	void addChannel(in string channel)
 	{
 		_channels ~= channel;
 	}
-	/// Remove a channel association from this user.
+
+	/**
+		Remove a channel association from this user.
+
+		Params:
+			channel = The channel to disassociate from this user.
+	*/
 	void removeChannel(in string channel)
 	{
 		import std.algorithm : remove;
@@ -141,7 +152,10 @@ public:
 
 		Params:
 			current = Current time.
-			d = Minimum elapsed idle threshold.
+			d       = Minimum elapsed idle threshold.
+
+		Returns:
+			`true` if the user is idle.
 	*/
 	bool isIdle(in MonoTime current, in Duration d)
 	{
@@ -162,7 +176,15 @@ public:
 		return format("%s!%s@%s", _nickName, _userName, _hostName);
 	}
 
-	/// Constructs an `IrcUser` from a prefix string.
+	/**
+		Constructs an `IrcUser` from a prefix string.
+
+		Params:
+			prefix = The prefix string to parse.
+
+		Returns:
+			New `IrcUser` instance.
+	*/
 	static IrcUser fromPrefix(string prefix)
 	{
 		IrcUser result;
@@ -170,7 +192,7 @@ public:
 		if (prefix !is null)
 		{
 			string userName, hostName;
-			string nickName = prefix.takeUntil!(x => x == '!');
+			immutable nickName = prefix.takeUntil!(x => x == '!');
 
 			if (!prefix.empty)
 			{
