@@ -38,14 +38,11 @@ public:
 
 int main()
 {
-	Address[] addresses = getAddress("127.0.0.1", 6667);
-
-	// nickName, userName, (optional) realName
-	IrcClient client = new IrcClient("Neko-test", "Neko-test", "Neko-test");
-	auto w = new whatever(client);
+	Address[] addresses;
 
 	try
 	{
+		addresses = getAddress("127.0.0.1", 6667);
 		enforce(addresses.length, "Address not found.");
 	}
 	catch (Exception ex)
@@ -53,6 +50,10 @@ int main()
 		stderr.writeln(ex.msg);
 		return -1;
 	}
+
+	// nickName, userName, (optional) realName
+	IrcClient client = new IrcClient("Neko-test", "Neko-test", "Neko-test");
+	auto w = new whatever(client);
 
 	for (int i = 1; i <= 10; i++)
 	{
