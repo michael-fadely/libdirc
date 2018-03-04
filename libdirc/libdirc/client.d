@@ -815,7 +815,7 @@ public:
 			overflow = null;
 		}
 
-		auto lines = buffer.split("\r\n").filter!(x => x.length > 0).array;
+		auto lines = buffer.split("\r\n").filter!((x) => x.length > 0).array;
 
 		if (received > 0 && !buffer.endsWith("\n"))
 		{
@@ -906,7 +906,7 @@ public:
 			return me;
 		}
 
-		auto search = find!(x => !sicmp(x.nickName, nickName))(users[]);
+		auto search = find!((x) => !sicmp(x.nickName, nickName))(users[]);
 		return search.empty ? null : search.front;
 	}
 
@@ -984,12 +984,12 @@ public:
 			return;
 		}
 
-		auto search = find!(x => !sicmp(x.nickName, nickName))(users[]);
+		auto search = find!((x) => !sicmp(x.nickName, nickName))(users[]);
 
 		if (!search.empty)
 		{
 			users.linearRemove(take(search, 1));
-			channels.byValue().each!(x => x.removeUser(nickName));
+			channels.byValue().each!((x) => x.removeUser(nickName));
 			debug stdout.writeln("Stopped tracking user: ", nickName);
 		}
 	}
@@ -1428,7 +1428,7 @@ private:
 
 				if (nicks !is null)
 				{
-					nicks = nicks.filter!(x => !x.empty).array;
+					nicks = nicks.filter!((x) => !x.empty).array;
 				}
 
 				user.resetActionTime();
@@ -1537,8 +1537,8 @@ private:
 
 				// rename user in all channels where user is present
 				channels.byValue()
-					.filter!(x => user.channels.canFind(x.name))
-					.each!(x => x.renameUser(user.nickName, newNick));
+					.filter!((x) => user.channels.canFind(x.name))
+					.each!((x) => x.renameUser(user.nickName, newNick));
 
 				user.nickName = newNick;
 				break;
@@ -1564,12 +1564,12 @@ private:
 
 			case RPL_NAMREPLY:
 				auto channel = args[2];
-				auto names = args[3].split.filter!(x => x.length > 0);
+				auto names = args[3].split.filter!((x) => x.length > 0);
 
 				foreach (string s; names)
 				{
 					auto nick = s;
-					auto modes = nick.takeWhile!(x => channelUserPrefixes.canFind(x));
+					auto modes = nick.takeWhile!((x) => channelUserPrefixes.canFind(x));
 
 					if (sicmp(nick, nickName) != 0) // skip self; added on join.
 					{
@@ -1597,14 +1597,14 @@ private:
 				if (user !is null)
 				{
 					auto rname = args[7].idup;
-					rname.takeWhile!(x => isDigit(x) || isWhite(x));
+					rname.takeWhile!((x) => isDigit(x) || isWhite(x));
 
 					user.userName = args[2];
 					user.hostName = args[3];
 					user.realName = rname;
 
 					auto mode = args[6].idup;
-					mode.takeUntil!(x => channelUserPrefixes.canFind(x));
+					mode.takeUntil!((x) => channelUserPrefixes.canFind(x));
 
 					if (!mode.empty)
 					{
@@ -1866,7 +1866,7 @@ private:
 
 	static void raiseEvent(E, A...)(E[] event, A args)
 	{
-		event.each!(x => x(args));
+		event.each!((x) => x(args));
 	}
 
 	static bool isCtcp(in string message)
