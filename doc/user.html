@@ -19,6 +19,37 @@
         vertical-align: baseline;
       }
 
+      h1 { font-size: 200%; }
+      h2 { font-size: 160%; }
+      h3 { font-size: 120%; }
+      h4 { font-size: 100%; }
+      h5 { font-size: 80%; }
+      h6 { font-size: 80%; font-weight: normal; }
+
+      ul, ol {
+        margin: 1.4em 0;
+      }
+      ul ul, ol ol, ul ol, ol ul {
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+      ul, ol {
+        margin-left: 2.8em;
+      }
+
+      ol {
+        list-style: decimal;
+      }
+      ol ol {
+        list-style: lower-alpha;
+      }
+      ol ol ol {
+        list-style: lower-roman;
+      }
+      ol ol ol ol {
+        list-style: decimal;
+      }
+
       .color_red { color: #dc322f; }
       .color_blue { color: #268bd2; }
       .color_green { color: #859901; }
@@ -106,7 +137,7 @@
         border-radius: 5px;
       }
 
-      #ddoc_main .ddoc_decl .section h4, #ddoc_main .section.ddoc_sections h4 {
+      #ddoc_main .ddoc_decl .section h4:first-of-type, #ddoc_main .section.ddoc_sections h4:first-of-type {
         font-size: 13px;
         line-height: 1.5;
         margin-top: 21px;
@@ -645,7 +676,7 @@
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.nickName"></span>const @property auto <code class="code">nickName</code>();
+            <span class="ddoc_anchor" id="IrcUser.nickName"></span>const @property string <code class="code">nickName</code>();
 <br>
 @property void <code class="code">nickName</code>(in string <code class="code">value</code>);
 
@@ -680,7 +711,7 @@ Note that the setter duplicates your input.
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.userName"></span>const @property auto <code class="code">userName</code>();
+            <span class="ddoc_anchor" id="IrcUser.userName"></span>const @property string <code class="code">userName</code>();
 <br>
 @property void <code class="code">userName</code>(in string <code class="code">value</code>);
 
@@ -715,7 +746,7 @@ Note that the setter duplicates your input.
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.hostName"></span>const @property auto <code class="code">hostName</code>();
+            <span class="ddoc_anchor" id="IrcUser.hostName"></span>const @property string <code class="code">hostName</code>();
 <br>
 @property void <code class="code">hostName</code>(in string <code class="code">value</code>);
 
@@ -750,7 +781,7 @@ Note that the setter duplicates your input.
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.realName"></span>const @property auto <code class="code">realName</code>();
+            <span class="ddoc_anchor" id="IrcUser.realName"></span>const @property string <code class="code">realName</code>();
 <br>
 @property void <code class="code">realName</code>(in string <code class="code">value</code>);
 
@@ -785,7 +816,7 @@ Note that the setter duplicates your input.
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.channels"></span>const @property auto <code class="code">channels</code>();
+            <span class="ddoc_anchor" id="IrcUser.channels"></span>const @property const(string[]) <code class="code">channels</code>();
 
           </code>
         </p>
@@ -817,7 +848,7 @@ Note that the setter duplicates your input.
       <div class="dlang">
         <p class="para">
           <code class="code">
-            <span class="ddoc_anchor" id="IrcUser.lastActionTime"></span>@property auto <code class="code">lastActionTime</code>();
+            <span class="ddoc_anchor" id="IrcUser.lastActionTime"></span>@property MonoTime <code class="code">lastActionTime</code>();
 
           </code>
         </p>

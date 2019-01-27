@@ -108,7 +108,7 @@ public:
 
 		/// Gets or sets the client's nick name for this network.
 		/// Throws: `Exception` if length exceeds `maxNickLength` (if `maxNickLength` is > `0`).
-		auto nickName() const
+		string nickName() const
 		{
 			return me.nickName;
 		}
@@ -130,7 +130,7 @@ public:
 
 		/// Gets or sets the client's user name.
 		/// Throws: `Exception` on attempted change while connected.
-		auto userName() const
+		string userName() const
 		{
 			return me.userName;
 		}
@@ -142,14 +142,14 @@ public:
 		}
 
 		/// Gets the currently assigned host name.
-		auto hostName() const
+		string hostName() const
 		{
 			return me.hostName;
 		}
 
 		/// Gets or sets the real name for this client.
 		/// Throws: `Exception` on attempted change while connected.
-		auto realName() const
+		string realName() const
 		{
 			return me.realName;
 		}
@@ -161,7 +161,7 @@ public:
 		}
 
 		/// Gets the name of the currently connected network.
-		auto networkName() const
+		string networkName() const
 		{
 			return _networkName;
 		}
@@ -311,7 +311,7 @@ public:
 		{
 			if (message is null)
 			{
-				return format("\x01%s\x01", tag);
+				return format!("\x01%s\x01")(tag);
 			}
 
 			Appender!string result;
@@ -329,7 +329,7 @@ public:
 		}
 
 		auto outbound = doFormat(tag, message);
-		auto lineLength = LINE_LENGTH - format("%s %s :", command, target).length - 1;
+		auto lineLength = LINE_LENGTH - format!("%s %s :")(command, target).length - 1;
 
 		while (outbound.length > lineLength)
 		{
@@ -717,7 +717,7 @@ public:
 
 		string doFormat(in string command, in string target, in string message)
 		{
-			return format("%s %s :%s", command, target, message);
+			return format!("%s %s :%s")(command, target, message);
 		}
 
 		auto outbound = doFormat(command, target, message);
@@ -804,18 +804,21 @@ public:
 		}
 
 		// see: https://github.com/JakobOvrum/Dirk/blob/master/source/irc/protocol.d#L78
-		auto buffer = cast(string)data[0 .. received];
+		char[] buffer = data[0 .. received];
 
 		lastNetTime = now;
 		timingOut = false;
 
 		if (overflow !is null)
 		{
-			buffer = cast(string)overflow ~ buffer;
+			buffer = overflow ~ buffer;
 			overflow = null;
 		}
 
-		auto lines = buffer.split("\r\n").filter!((x) => x.length > 0).array;
+		string[] lines = buffer.splitter("\r\n")
+		                       .filter!((x) => x.length > 0)
+						       .map!(to!string)
+						       .array;
 
 		if (received > 0 && !buffer.endsWith("\n"))
 		{
@@ -866,7 +869,7 @@ public:
 					
 					if (r[colon - 1] == ' ')
 					{
-						tags_str.put(r[0 .. colon - 1].dup);
+						tags_str.put(r[0 .. colon - 1]);
 						r = r[++colon .. $];
 
 						prefix = r.takeUntil!isWhite;
@@ -877,7 +880,7 @@ public:
 					}
 					else
 					{
-						tags_str.put(r[0 .. ++colon].dup);
+						tags_str.put(r[0 .. ++colon]);
 					}
 				}
 
@@ -1423,7 +1426,7 @@ private:
 				break;
 
 			case Mode:
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto nicks = args.length > 2 ? args[2 .. $] : null;
 
 				if (nicks !is null)
@@ -1436,7 +1439,7 @@ private:
 
 				if (args[0].isChannel)
 				{
-					auto channel = args[0].idup;
+					const channel = args[0];
 					channels[channel].onMode(channel, args[1], nicks);
 				}
 				break;
@@ -1477,7 +1480,7 @@ private:
 
 			case PrivMsg:
 				auto target = args[0];
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto message = args[1];
 				user.resetActionTime();
 
@@ -1494,7 +1497,7 @@ private:
 
 			case Notice:
 				auto target = args[0];
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto message = args[1];
 				user.resetActionTime();
 
@@ -1530,7 +1533,7 @@ private:
 				break;
 
 			case Nick:
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto newNick = args[0];
 				user.resetActionTime();
 				raiseEvent(onNickChange, user, newNick);
@@ -1546,7 +1549,7 @@ private:
 			case Join:
 				if (!sicmp(getNickName(prefix), nickName))
 				{
-					auto channel = args[0].idup;
+					auto channel = args[0];
 					channels[channel] = new IrcChannel(channel, this);
 					addUser(prefix, channel).resetActionTime();
 					raiseEvent(onSuccessfulJoin, channel);
@@ -1578,7 +1581,7 @@ private:
 
 					if (!modes.empty)
 					{
-						channels[channel.idup].setMode(nick, modes[0]);
+						channels[channel].setMode(nick, modes[0]);
 					}
 				}
 
@@ -1592,7 +1595,7 @@ private:
 
 			case RPL_WHOREPLY:
 				// [0:target] [1:channel] [2:user] [3:host] [4:server] [5:nick] [6:H/G/whatever not important] [7:[hop count] [real name]]
-				auto user = getUser(args[5]);
+				IrcUser user = getUser(args[5]);
 
 				if (user !is null)
 				{
@@ -1614,7 +1617,7 @@ private:
 				break;
 
 			case Part:
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto channel = args[0];
 
 				raiseEvent(onPart, user, channel);
@@ -1630,7 +1633,7 @@ private:
 				break;
 
 			case Kick:
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				auto channel = args[0];
 				auto kicked = args[1];
 				string reason = args.length > 2 ? args[2] : "";
@@ -1649,7 +1652,7 @@ private:
 				break;
 
 			case Quit:
-				auto user = getUserFromPrefix(prefix);
+				IrcUser user = getUserFromPrefix(prefix);
 				string message = args.empty ? null : args[0];
 
 				raiseEvent(onQuit, user, message);
@@ -1669,7 +1672,7 @@ private:
 				break;
 
 			case RPL_WHOISUSER:
-				auto user = getUser(args[1]);
+				IrcUser user = getUser(args[1]);
 
 				if (user is null)
 				{
@@ -1699,7 +1702,7 @@ private:
 				break;
 
 			case RPL_WHOISCHANNELS:
-				auto nick = args[1];
+				string nick = args[1];
 				auto chanList = split(args[2]);
 
 				foreach(ref channel; chanList)
@@ -1751,7 +1754,7 @@ private:
 				break;
 
 			case "005":
-				auto trimmed = args[1 .. $ - 1];
+				const(string)[] trimmed = args[1 .. $ - 1];
 
 				foreach (s; trimmed)
 				{
@@ -1784,8 +1787,8 @@ private:
 							auto end = value.indexOf(')');
 							enforce(end != -1 && end != value.length - 1);
 
-							auto modes = value[1 .. end];
-							auto prefixes = value[end + 1 .. $];
+							string modes = value[1 .. end];
+							string prefixes = value[end + 1 .. $];
 							enforce(modes.length == prefixes.length);
 
 							_channelUserModes    = modes.dup;
@@ -1798,28 +1801,28 @@ private:
 								break;
 							}
 
-							const(char)[][4] modeTypes;
+							string[4] modeTypes;
 
 							modeTypes = value.split(',');
 
 							if (channelListModes != modeTypes[0])
 							{
-								channelListModes = modeTypes[0].idup;
+								channelListModes = modeTypes[0];
 							}
 
 							if (channelParameterizedModes != modeTypes[1])
 							{
-								channelParameterizedModes = modeTypes[1].idup;
+								channelParameterizedModes = modeTypes[1];
 							}
 
 							if (channelNullaryRemovableModes != modeTypes[2])
 							{
-								channelNullaryRemovableModes = modeTypes[2].idup;
+								channelNullaryRemovableModes = modeTypes[2];
 							}
 
 							if (channelSettingModes != modeTypes[3])
 							{
-								channelSettingModes = modeTypes[3].idup;
+								channelSettingModes = modeTypes[3];
 							}
 							break;
 
@@ -1834,7 +1837,7 @@ private:
 						case "NETWORK":
 							if (!value.empty)
 							{
-								_networkName = value.idup;
+								_networkName = value;
 							}
 
 							break;
@@ -1846,15 +1849,15 @@ private:
 				//[1] = {length=5 "#test"}
 				//[2] = {length=57 "You must wait 5 seconds after being kicked to rejoin (+J)"}
 			case JoinTooSoon:
-				auto whatever = args[2].dup;
+				string whatever = args[2];
 				whatever.takeUntil!isDigit;
 
 				enforce(!whatever.empty);
 				
-				auto seconds_str = whatever.takeWhile!isDigit;
+				string seconds_str = whatever.takeWhile!isDigit;
 				whatever.takeWhile!isWhite;
 				
-				auto seconds = to!int(seconds_str);
+				const seconds = to!int(seconds_str);
 
 				if (whatever.startsWith("second"))
 				{

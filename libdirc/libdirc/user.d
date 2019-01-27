@@ -58,61 +58,61 @@ public:
 	{
 		/// Gets or sets the nick name for this user.
 		/// Note that the setter duplicates your input.
-		auto nickName() const
+		string nickName() const
 		{
 			return _nickName;
 		}
 		/// ditto
 		void nickName(in string value)
 		{
-			_nickName = value.dup;
+			_nickName = value.idup;
 		}
 
 		/// Gets or sets the user name for this user.
 		/// Note that the setter duplicates your input.
-		auto userName() const
+		string userName() const
 		{
 			return _userName;
 		}
 		/// ditto
 		void userName(in string value)
 		{
-			_userName = value.dup;
+			_userName = value.idup;
 		}
 
 		/// Gets or sets the host name for this user.
 		/// Note that the setter duplicates your input.
-		auto hostName() const
+		string hostName() const
 		{
 			return _hostName;
 		}
 		/// ditto
 		void hostName(in string value)
 		{
-			_hostName = value.dup;
+			_hostName = value.idup;
 		}
 
 		/// Gets or sets the "real name" for this user.
 		/// Note that the setter duplicates your input.
-		auto realName() const
+		string realName() const
 		{
 			return _realName;
 		}
 		/// ditto
 		void realName(in string value)
 		{
-			_realName = value.dup;
+			_realName = value.idup;
 		}
 
 		/// Gets or sets an array of channels this user is associated with.
-		auto channels() const
+		const(string[]) channels() const
 		{
 			return _channels;
 		}
 
 		/// Gets the time of the last recorded action performed by this user.
 		/// See_Also: resetActionTime, isIdle, idleTime
-		auto lastActionTime() { return _lastActionTime; }
+		MonoTime lastActionTime() { return _lastActionTime; }
 	}
 
 	/**
@@ -123,7 +123,7 @@ public:
 	*/
 	void addChannel(in string channel)
 	{
-		_channels ~= channel;
+		_channels ~= channel.idup;
 	}
 
 	/**
@@ -173,7 +173,7 @@ public:
 	/// See_Also: fromPrefix
 	override string toString() const
 	{
-		return format("%s!%s@%s", _nickName, _userName, _hostName);
+		return format!("%s!%s@%s")(_nickName, _userName, _hostName);
 	}
 
 	/**
