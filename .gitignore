@@ -252,3 +252,4 @@ __dummy.html
 *.exe
 __test__*__
 libdirc/lib
+libdirc.lib
