@@ -817,10 +817,10 @@ public:
 
 		string[] lines = buffer.splitter("\r\n")
 		                       .filter!((x) => x.length > 0)
-						       .map!(to!string)
-						       .array;
+		                       .map!(to!string)
+		                       .array;
 
-		if (received > 0 && !buffer.endsWith("\n"))
+		if (received > 0 && !buffer.endsWith("\r\n"))
 		{
 			auto i = buffer.lastIndexOf('\n');
 			overflow = buffer[++i .. $].dup;
