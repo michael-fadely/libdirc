@@ -204,7 +204,7 @@ public:
 		}
 
 		sendNick();
-		rawf("%s %s * * :%s", IrcCommand.User, userName, realName);
+		rawf(IrcCommand.User ~ " %s * * :%s", userName, realName);
 	}
 
 	/// Sends a formatted raw message.
@@ -759,7 +759,7 @@ public:
 
 		if (overflow !is null)
 		{
-			const remainder = IRC_MAX_LEN - overflow.length;
+			const remainder = (overflow.length > IRC_MAX_LEN) ? 0 : IRC_MAX_LEN - overflow.length;
 			data = !remainder ? in_buffer : new char[remainder];
 		}
 		else
@@ -803,7 +803,6 @@ public:
 			}
 		}
 
-		// see: https://github.com/JakobOvrum/Dirk/blob/master/source/irc/protocol.d#L78
 		char[] buffer = data[0 .. received];
 
 		lastNetTime = now;
