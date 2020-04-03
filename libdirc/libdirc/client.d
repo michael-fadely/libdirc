@@ -21,9 +21,9 @@ import libdirc.util;
 debug import std.stdio;
 
 // https://github.com/JakobOvrum/Dirk/blob/ec8acb2441fc0ec14b186971cc15ddcd170e5086/source/irc/protocol.d#L13-L20
-private enum IRC_MAX_LEN      = 512;
-private enum IRC_USERHOST_LEN = 63 + 10 + 1;
-private enum LINE_LENGTH      = (IRC_MAX_LEN - "\r\n".length) - IRC_USERHOST_LEN;
+private enum ircMaxLength      = 512;
+private enum ircUserHostLength = 63 + 10 + 1;
+private enum ircLineLength     = (ircMaxLength - "\r\n".length) - ircUserHostLength;
 
 private auto ctcpRegex = ctRegex!(`\x01[^\x01]+\x01`);
 
@@ -42,7 +42,7 @@ private:
 	bool timingOut;
 
 	bool _connected;
-	char[IRC_MAX_LEN] in_buffer;
+	char[ircMaxLength] inBuffer;
 	char[] overflow;
 
 	char[] _channelUserModes    = [ 'o', 'v' ];
@@ -329,7 +329,7 @@ public:
 		}
 
 		auto outbound = doFormat(tag, message);
-		auto lineLength = LINE_LENGTH - format!("%s %s :")(command, target).length - 1;
+		auto lineLength = ircLineLength - format!("%s %s :")(command, target).length - 1;
 
 		while (outbound.length > lineLength)
 		{
@@ -723,9 +723,9 @@ public:
 		auto outbound = doFormat(command, target, message);
 		const colon = outbound.indexOf(':');
 
-		while (outbound.length > LINE_LENGTH)
+		while (outbound.length > ircLineLength)
 		{
-			auto s = outbound[0 .. LINE_LENGTH];
+			auto s = outbound[0 .. ircLineLength];
 			auto i = s.lastIndexOf(' ');
 
 			if (i >= 0 && i > colon)
@@ -734,7 +734,7 @@ public:
 			}
 			else
 			{
-				i = LINE_LENGTH;
+				i = ircLineLength;
 			}
 
 			raw(s);
@@ -759,12 +759,12 @@ public:
 
 		if (overflow !is null)
 		{
-			const remainder = (overflow.length > IRC_MAX_LEN) ? 0 : IRC_MAX_LEN - overflow.length;
-			data = !remainder ? in_buffer : new char[remainder];
+			const remainder = (overflow.length > ircMaxLength) ? 0 : ircMaxLength - overflow.length;
+			data = !remainder ? inBuffer : new char[remainder];
 		}
 		else
 		{
-			data = in_buffer;
+			data = inBuffer;
 		}
 
 		ptrdiff_t received = socket.receive(data);
