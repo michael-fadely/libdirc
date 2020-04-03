@@ -940,10 +940,6 @@ public:
 		return result;
 	}
 
-	/// Get a tracked user from a prefix.
-	/// If a tracked user from this prefix doesn't exist, a new `IrcUser` is returned.
-	/// Otherwise, the tracked user is returned.
-
 	/**
 		Get a tracked user from a prefix.
 
