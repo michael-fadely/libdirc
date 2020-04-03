@@ -86,6 +86,7 @@ public:
 	{
 		me = new IrcUser(nickName, userName, null, realName);
 	}
+
 	~this()
 	{
 		quit();
@@ -112,6 +113,7 @@ public:
 		{
 			return me.nickName;
 		}
+
 		/// ditto
 		void nickName(in string value)
 		{
@@ -134,6 +136,7 @@ public:
 		{
 			return me.userName;
 		}
+
 		/// ditto
 		void userName(in string value)
 		{
@@ -153,6 +156,7 @@ public:
 		{
 			return me.realName;
 		}
+
 		/// ditto
 		void realName(in string value)
 		{
@@ -169,6 +173,7 @@ public:
 		/// Gets the channel user modes supported by the currently connected network.
 		/// Defaults to 'o', 'v'
 		auto channelUserModes() const { return _channelUserModes; }
+
 		/// Gets the user prefixes supported by the currently connected network.
 		/// Defaults to '@', '+'
 		auto channelUserPrefixes() const { return _channelUserPrefixes; }
@@ -213,6 +218,7 @@ public:
 	{
 		raw(format(fmt, args));
 	}
+
 	/// Sends a raw message.
 	/// Throws: `Exception` if not connected or if the line is empty.
 	/// See_Also: rawf
@@ -429,6 +435,7 @@ public:
 	{
 		raw(IrcCommand.Part ~ ' ' ~ channel);
 	}
+
 	/// ditto
 	void part(in string channel, in string message)
 	{
@@ -459,6 +466,7 @@ public:
 	{
 		kick(channel, user.nickName, comment);
 	}
+
 	/// ditto
 	void kick(in string channel, in string user, in string comment = null)
 	{
@@ -486,13 +494,13 @@ public:
 		rawf(IrcCommand.Mode ~ " %s %c%s", target, type, args);
 	}
 
-	// see: https://github.com/JakobOvrum/Dirk/blob/ec8acb2441fc0ec14b186971cc15ddcd170e5086/source/irc/client.d#L628
 	/// Adds user modes to self.
 	/// See_Also: mode, removeUserModes
 	void addUserModes(in string modes)
 	{
 		mode(nickName, '+', modes);
 	}
+
 	/// Removes user modes from self.
 	/// See_Also: mode, addUserModes
 	void removeUserModes(in string modes)
@@ -1370,11 +1378,13 @@ private:
 	{
 		socket.shutdown(SocketShutdown.BOTH);
 		socket.close();
+
 		_connected = false;
 		timingOut = false;
 
 		channels.clear();
 		users.clear();
+
 		overflow = null;
 		me.hostName = null;
 	}
@@ -1383,9 +1393,12 @@ private:
 	{
 		auto start = message.indexOf("\x01");
 		auto end = message[start + 1 .. $].indexOf("\x01");
+
 		string m = message[++start .. ++end];
 		string tag = m.takeUntil!isWhite;
+
 		m.takeWhile!isWhite;
+
 		raiseEvent(event, user, target, tag, m);
 	}
 
