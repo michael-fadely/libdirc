@@ -63,7 +63,7 @@ private:
 
 	void sendNick()
 	{
-		raw(IrcCommand.Nick ~ ' ' ~ nickName);
+		raw(IrcCommand.nick ~ ' ' ~ nickName);
 	}
 
 public:
@@ -205,11 +205,11 @@ public:
 
 		if (password != null)
 		{
-			raw(IrcCommand.Pass ~ ' ' ~ password);
+			raw(IrcCommand.pass ~ ' ' ~ password);
 		}
 
 		sendNick();
-		rawf(IrcCommand.User ~ " %s * * :%s", userName, realName);
+		rawf(IrcCommand.user ~ " %s * * :%s", userName, realName);
 	}
 
 	/// Sends a formatted raw message.
@@ -268,7 +268,7 @@ public:
 	void send(in string target, in string message)
 	{
 		enforceNotNull(target, target.stringof);
-		sendMessage(IrcCommand.PrivMsg, target, message);
+		sendMessage(IrcCommand.privMsg, target, message);
 	}
 
 	/**
@@ -306,7 +306,7 @@ public:
 	void notice(in string target, in string message)
 	{
 		enforceNotNull(target, target.stringof);
-		sendMessage(IrcCommand.Notice, target, message);
+		sendMessage(IrcCommand.notice, target, message);
 	}
 
 	private void ctcp(in string command, in string target, in string tag, in string message)
@@ -375,7 +375,7 @@ public:
 	*/
 	void ctcpQuery(in string target, in string tag, in string message = null)
 	{
-		ctcp(IrcCommand.PrivMsg, target, tag, message);
+		ctcp(IrcCommand.privMsg, target, tag, message);
 	}
 
 	/**
@@ -394,7 +394,7 @@ public:
 	*/
 	void ctcpReply(in string target, in string tag, in string message = null)
 	{
-		ctcp(IrcCommand.Notice, target, tag, message);
+		ctcp(IrcCommand.notice, target, tag, message);
 	}
 
 	/**
@@ -416,11 +416,11 @@ public:
 
 		if (key is null)
 		{
-			raw(IrcCommand.Join ~ ' ' ~ channel);
+			raw(IrcCommand.join ~ ' ' ~ channel);
 		}
 		else
 		{
-			raw(IrcCommand.Join ~ ' ' ~ channel ~ " :" ~ key);
+			raw(IrcCommand.join ~ ' ' ~ channel ~ " :" ~ key);
 		}
 	}
 
@@ -433,13 +433,13 @@ public:
 	*/
 	void part(in string channel)
 	{
-		raw(IrcCommand.Part ~ ' ' ~ channel);
+		raw(IrcCommand.part ~ ' ' ~ channel);
 	}
 
 	/// ditto
 	void part(in string channel, in string message)
 	{
-		raw(IrcCommand.Part ~ ' ' ~ channel ~ " :" ~ message);
+		raw(IrcCommand.part ~ ' ' ~ channel ~ " :" ~ message);
 	}
 
 	/// Quit the currently connected network.
@@ -448,7 +448,7 @@ public:
 	{
 		if (connected)
 		{
-			raw(IrcCommand.Quit ~ " :" ~ message);
+			raw(IrcCommand.quit ~ " :" ~ message);
 		}
 
 		disconnect();
@@ -472,11 +472,11 @@ public:
 	{
 		if (comment !is null)
 		{
-			raw(IrcCommand.Kick ~ ' ' ~ channel ~ ' ' ~ user ~ " :" ~ comment);
+			raw(IrcCommand.kick ~ ' ' ~ channel ~ ' ' ~ user ~ " :" ~ comment);
 		}
 		else
 		{
-			raw(IrcCommand.Kick ~ ' ' ~ channel ~ ' ' ~ user);
+			raw(IrcCommand.kick ~ ' ' ~ channel ~ ' ' ~ user);
 		}
 	}
 
@@ -491,7 +491,7 @@ public:
 	void mode(in string target, char type, in string args)
 	{
 		enforce(type == '+' || type == '-', "type must b e either '+' or '-'.");
-		rawf(IrcCommand.Mode ~ " %s %c%s", target, type, args);
+		rawf(IrcCommand.mode ~ " %s %c%s", target, type, args);
 	}
 
 	/// Adds user modes to self.
@@ -572,7 +572,7 @@ public:
 
 		foreach (arg; args)
 		{
-			rawf(IrcCommand.Mode ~ " %s +%c %s", channel, type, arg);
+			rawf(IrcCommand.mode ~ " %s +%c %s", channel, type, arg);
 		}
 	}
 
@@ -596,7 +596,7 @@ public:
 
 		foreach (arg; args)
 		{
-			rawf(IrcCommand.Mode ~ " %s -%c %s", channel, type, arg);
+			rawf(IrcCommand.mode ~ " %s -%c %s", channel, type, arg);
 		}
 	}
 
@@ -690,7 +690,7 @@ public:
 	/// Fires the onWhois events on success.
 	void whois(in string target)
 	{
-		raw(IrcCommand.Whois ~ ' ' ~ target);
+		raw(IrcCommand.whois ~ ' ' ~ target);
 	}
 
 	/// Performs a who on the specified user and channel.
@@ -1423,17 +1423,17 @@ private:
 			case "266": // Current Global Users
 				break;
 
-			case Error:
+			case error:
 				throw new Exception(args[0]);
 
-			case Ping:
+			case ping:
 				raw("PONG :" ~ args[0]);
 				break;
 
-			case Pong:
+			case pong:
 				break;
 
-			case Mode:
+			case mode:
 				IrcUser user = getUserFromPrefix(prefix);
 				auto nicks = args.length > 2 ? args[2 .. $] : null;
 
@@ -1486,7 +1486,7 @@ private:
 
 				break;
 
-			case PrivMsg:
+			case privMsg:
 				auto target = args[0];
 				IrcUser user = getUserFromPrefix(prefix);
 				auto message = args[1];
@@ -1503,7 +1503,7 @@ private:
 
 				break;
 
-			case Notice:
+			case notice:
 				auto target = args[0];
 				IrcUser user = getUserFromPrefix(prefix);
 				auto message = args[1];
@@ -1536,11 +1536,11 @@ private:
 				raiseEvent(onMotdEnd, args[1]);
 				break;
 
-			case DisplayedHost:
+			case displayedHost:
 				me.hostName = args[1];
 				break;
 
-			case Nick:
+			case nick:
 				IrcUser user = getUserFromPrefix(prefix);
 				auto newNick = args[0];
 				user.resetActionTime();
@@ -1554,7 +1554,7 @@ private:
 				user.nickName = newNick;
 				break;
 
-			case Join:
+			case join:
 				if (!sicmp(getNickName(prefix), nickName))
 				{
 					auto channel = args[0];
@@ -1569,7 +1569,7 @@ private:
 
 				break;
 
-			case Invite:
+			case invite:
 				raiseEvent(onInvite, getUserFromPrefix(prefix), args[0], args[1]);
 				break;
 
@@ -1624,7 +1624,7 @@ private:
 				}
 				break;
 
-			case Part:
+			case part:
 				IrcUser user = getUserFromPrefix(prefix);
 				auto channel = args[0];
 
@@ -1640,7 +1640,7 @@ private:
 				}
 				break;
 
-			case Kick:
+			case kick:
 				IrcUser user = getUserFromPrefix(prefix);
 				auto channel = args[0];
 				auto kicked = args[1];
@@ -1659,7 +1659,7 @@ private:
 				}
 				break;
 
-			case Quit:
+			case quit:
 				IrcUser user = getUserFromPrefix(prefix);
 				string message = args.empty ? null : args[0];
 
@@ -1671,11 +1671,11 @@ private:
 				raiseEvent(onTopic, args[1], args[2]);
 				break;
 
-			case TopicChange:
+			case topicChange:
 				raiseEvent(onTopicChange, getUserFromPrefix(prefix), args[0], args[1]);
 				break;
 
-			case TopicInfo:
+			case topicInfo:
 				raiseEvent(onTopicInfo, args[1], args[2], args[3]);
 				break;
 
@@ -1856,7 +1856,7 @@ private:
 
 				//[1] = {length=5 "#test"}
 				//[2] = {length=57 "You must wait 5 seconds after being kicked to rejoin (+J)"}
-			case JoinTooSoon:
+			case joinTooSoon:
 				string whatever = args[2];
 				whatever.takeUntil!isDigit;
 
@@ -1891,26 +1891,26 @@ private:
 /// Supported IRC commands.
 enum IrcCommand : string
 {
-	ChanModes         = "CHANMODES",
-	Mode              = "MODE",
-	Error             = "ERROR",
-	Join              = "JOIN",
-	Invite            = "INVITE",
-	Kick              = "KICK",
-	Network           = "NETWORK",
-	Nick              = "NICK",
-	NickLen           = "NICKLEN",
-	Notice            = "NOTICE",
-	Part              = "PART",
-	Pass              = "PASS",
-	Ping              = "PING",
-	Pong              = "PONG",
-	Prefix            = "PREFIX",
-	PrivMsg           = "PRIVMSG",
-	Quit              = "QUIT",
-	User              = "USER",
-	Whois             = "WHOIS",
-	TopicChange       = "TOPIC",
+	chanModes         = "CHANMODES",
+	mode              = "MODE",
+	error             = "ERROR",
+	join              = "JOIN",
+	invite            = "INVITE",
+	kick              = "KICK",
+	network           = "NETWORK",
+	nick              = "NICK",
+	nickLen           = "NICKLEN",
+	notice            = "NOTICE",
+	part              = "PART",
+	pass              = "PASS",
+	ping              = "PING",
+	pong              = "PONG",
+	prefix            = "PREFIX",
+	privMsg           = "PRIVMSG",
+	quit              = "QUIT",
+	user              = "USER",
+	whois             = "WHOIS",
+	topicChange       = "TOPIC",
 	RPL_WELCOME       = "001",
 	RPL_YOURHOST      = "002",
 	RPL_CREATED       = "003",
@@ -1930,14 +1930,14 @@ enum IrcCommand : string
 	RPL_WHOISCHANNELS = "319",
 	RPL_WHOISACCOUNT  = "330",
 	RPL_TOPIC         = "332",
-	TopicInfo         = "333",
+	topicInfo         = "333",
 	RPL_WHOREPLY      = "352",
 	RPL_NAMREPLY      = "353",
 	RPL_ENDOFNAMES    = "366",
 	RPL_MOTD          = "372",
 	RPL_MOTDSTART     = "375",
 	RPL_ENDOFMOTD     = "376",
-	DisplayedHost     = "396",
+	displayedHost     = "396",
 	ERR_NICKNAMEINUSE = "433",
-	JoinTooSoon       = "495"
+	joinTooSoon       = "495"
 }
